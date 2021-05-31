@@ -1,0 +1,40 @@
+.timer {
+   margin-top: 33px;
+   font-size: 24px;
+ 
+   display: flex;
+   justify-content: center;
+   flex-direction: column;
+ }
+ 
+ .centering {
+   max-width: 600px;
+   margin: 0 auto;
+ }
+ 
+ .time-el {
+   display: inline-block;
+   min-width: 34px;
+   text-align: center;
+ }
+ 
+ .time-divider {
+   margin: 0 1px;
+ }
+ 
+ .divider {
+   width: 100%;
+   min-height: 1px;
+   border-top: 1px solid #9f9f9f;
+   margin-top: 3px;
+   margin-bottom: 3px;
+ }
+ 
+ .actions button {
+   margin-right: 12px;
+ }
+ 
+ .actions button:last-child {
+   margin-right: 0;
+ }
+ 

@@ -1,76 +1,125 @@
-import React , { useState, useEffect, useRef } from 'react';
-import  './app.scss';
-import {
-   Observable, Observer, fromEvent, of, from,
-   timer, interval,
-   range, throwError, combineLatest, zip,
-   forkJoin
-} from 'rxjs';
+import { useEffect, useState, useRef } from 'react';
+import { fromEvent, interval, timer } from 'rxjs';
+import { timeInterval } from 'rxjs/operators';
 
-const App = () => {
+import { TimerStatuses } from '../../constans/timer-statuses';
+import './app.scss';
+
+
+function App() {
  
-   const [seconds, setSeconds] = useState(0);
+   const [tickCounter, updateTick] = useState(0);
 
+   const tickCounterRef = useRef(tickCounter);
    
-   const [subscription, setSubscription] = useState(null);
-   const [checkMin, setCheckMin] = useState(null);
-   const [checkHours, setCheckHours] = useState(null);
-
-
-
+   const [timerSubscription, updateTimerSubscription] = useState(null);
+  
+   const [timerStatus, updateTimerStatus] = useState(TimerStatuses.stop);
+  
+   const waitBtnEl = useRef(null);
+  
+   const timerSubscriptionRef = useRef(timerSubscription);
+ 
+      useEffect(() => tickCounterRef.current = tickCounter, [tickCounter]);
+ 
+      useEffect(() => {
+       timerSubscriptionRef.current = timerSubscription
+     }, [timerSubscription]);
+   
+      useEffect(() => {
+       const waitBtnClickListener = fromEvent(waitBtnEl.current, 'click')
+         .pipe(timeInterval())
+         .subscribe(click => {
+           if (click.interval < 300) {
+             wait();
+           }
+         });
+         return () => {
+           if (waitBtnClickListener) {
+             waitBtnClickListener.unsubscribe();
+           }
+   
+           if (timerSubscription) {
+             timerSubscription.unsubscribe();
+           }
+         }
+     }, []);
+   
+ 
    const runTimer = () => {
-      if (!subscription) {
-         let timer = seconds;
-         setSubscription(interval(1000)
-         .subscribe(() => setSeconds(timer++)));
-      }
-   };
-
-   const Wait = () => {
-
+     let innerCounter = tickCounterRef.current; 
+     updateTimerSubscription(interval(1000).subscribe(() => updateTick(innerCounter++)));
+     updateTimerStatus(TimerStatuses.start); 
    }
-   const Stop = () => {
-
+ 
+   const stopTimer = () => {
+     updateTimerSubscription(timerSubscriptionRef.current.unsubscribe());
+     updateTimerStatus(TimerStatuses.stop); 
    }
-
+ 
+   const wait = () => {
+     stopTimer(); 
+     const waitSubsctiption = timer(2000)
+       .subscribe(() => {
+         runTimer();
+         waitSubsctiption.unsubscribe();
+       })
+   }
+ 
+   const resetTimer = () => {
+     updateTick(0);
+   }
+ 
+  
    const getMin = (tick) => {
-      if ((tick % 60) === 0 ) {
-        return (tick / 60) >= 60 ? 0 : tick % 60;
-      } else {
-        const minCount = ((tick - (tick % 60)) / 60);
-        return minCount < (60 - 1) ? minCount : minCount % 60;
-      }
-    }
+     if ((tick % 60) === 0 ) {
+       return (tick / 60) >= 60 ? 0 : tick % 60;
+     } else {
+       const minCount = ((tick - (tick % 60)) / 60);
+       return minCount < (60 - 1) ? minCount : minCount % 60;
+     }
+   }
+ 
+   const getSeckonds = (tick) => {
+     return (tick % 60) === 0 ? 0 : tick % 60;
+   }
+ 
+   const getHour = (tick) => {
+     return (tick % 3600) === 0 ? tick / 3600 : (tick - (tick % 3600)) / 3600;
+   }
+ 
+   const formatValue = (value) => {
+     return value.toString().length === 1 ? `0${value}`: value.toString() ;
+   }
   
-    const getSeckonds = (tick) => {
-      return (tick % 60) === 0 ? 0 : tick % 60;
-    }
-  
-    const getHour = (tick) => {
-      return (tick % 3600) === 0 ? tick / 3600 : (tick - (tick % 3600)) / 3600;
-    }
-  
-    const formatValue = (value) => {
-      return value.toString().length === 1 ? `0${value}`: value.toString() ;
-    };
-   
-      const renderTime = (tick) => {
-         const hours = formatValue(getHour(tick));
-         const minutes = formatValue(getMin(tick));
-         const seconds = formatValue(getSeckonds(tick));
-      };
-
+   const renderTime = (tick) => {
+     const hour = formatValue(getHour(tick));
+     const min = formatValue(getMin(tick));
+     const seconds = formatValue(getSeckonds(tick));
+ 
+     return (
+       <div className="content centering">
+         <span className="time-el">{hour}</span>
+         <span className="time-divider"> : </span>
+         <span className="time-el">{min}</span>
+         <span className="time-divider"> : </span>
+         <span className="time-el">{seconds}</span>
+       </div>
+     );
+   }
+ 
    return (
-      <div className="mainBlock">
-         <span>{hours}:</span>
-         <span>{minutes}:</span>
-         <span>{seconds}</span>
-         <br/>
-         <br/>
-         <button onClick={runTimer}> Start</button>
-         <button onClick={Wait}> Wait</button>
-         <button onClick={Stop}> Stop</button>
-      </div>
-   )
-}
-export default App;
+     <div className="timer">
+       {renderTime(tickCounter)}
+       <div className="divider centering"></div>
+       <div className="actions centering">
+           <button onClick={timerSubscription  ? stopTimer : runTimer}>{timerSubscription ? 'Stop' : 'Start'}</button>
+           <button ref={waitBtnEl} disabled={!timerSubscription && TimerStatuses.wait !== timerStatus}>Wait</button>
+           <button onClick={resetTimer} disabled={!timerSubscription}>Reset</button>
+       </div>
+     </div>
+   );
+ }
+ 
+ export default App;
+ 
